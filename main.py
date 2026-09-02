@@ -5,6 +5,8 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import re
+import os
+from pathlib import Path
 
 app = FastAPI(title="Universal Downloader")
 
@@ -89,7 +91,6 @@ def extract_instagram_media(url: str):
 
 # --- 3. FACEBOOK ENGINE ---
 def extract_facebook_media(url: str):
-    # Nếu là Facebook Reels/Video, dùng thẳng yt-dlp để bóc tách luồng stream video chuẩn xác
     if any(reels_tag in url for reels_tag in ["/reel", "/share/r/", "watch", "videos"]):
         try:
             ydl_opts = {
@@ -136,7 +137,6 @@ def extract_facebook_media(url: str):
         except Exception:
             pass
 
-    # Bóc tách trang ảnh thông thường
     session = requests.Session()
     session.headers.update({
         "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
@@ -173,15 +173,26 @@ def extract_ytdlp_engine(url: str):
     if "youtube.com" in url or "youtu.be" in url:
         url = url.split("&list=")[0].split("?list=")[0]
 
+    BASE_DIR = Path(__file__).resolve().parent
+    cookie_path = str(BASE_DIR / "cookies.txt")
+    
+    if not os.path.exists(cookie_path):
+        cookie_path = None 
+
     ydl_opts = {
         'quiet': True,
         'no_warnings': True,
         'skip_download': True,
         'noplaylist': True,
-        'extractor_args': {'youtube': {'player_client': ['ios', 'mweb']}},
+        'cookiefile': cookie_path,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['tv_embedded', 'ios', 'mweb']
+            }
+        },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
-            'Accept-Language': 'en-US,en;q=0.9',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
         }
     }
 
@@ -212,7 +223,7 @@ def extract_ytdlp_engine(url: str):
             "title": info.get('title', 'Unknown Media'),
             "thumbnail": info.get('thumbnail'),
             "duration": info.get('duration'),
-            "platform": info.get('extractor_key', 'Media'),
+            "platform": info.get('extractor_key', 'YouTube'),
             "video_formats": video_list[:5],
             "audio_url": audio_url,
             "photos": []
@@ -325,15 +336,14 @@ HTML_CONTENT = """<!DOCTYPE html>
     </footer>
 
     <script>
-        // Tải trực tiếp file về máy thông qua Blob để vượt qua giới hạn Cross-Origin (CORS)
         async function forceDownload(url, filename, btnElement) {
             const originalHTML = btnElement.innerHTML;
             btnElement.disabled = true;
-            btnElement.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> Đang tải file về máy...';
+            btnElement.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> Đang tải...';
 
             try {
                 const response = await fetch(url);
-                if (!response.ok) throw new Error('Không thể tải file trực tiếp');
+                if (!response.ok) throw new Error('Không thể tải');
                 const blob = await response.blob();
                 const blobUrl = window.URL.createObjectURL(blob);
                 
@@ -345,7 +355,6 @@ HTML_CONTENT = """<!DOCTYPE html>
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(blobUrl);
             } catch (err) {
-                // Nếu bị chặn tải qua blob, mở tab mới như phương án dự phòng
                 window.open(url, '_blank');
             } finally {
                 btnElement.disabled = false;
@@ -401,7 +410,6 @@ HTML_CONTENT = """<!DOCTYPE html>
                 document.getElementById('platformTag').innerText = data.platform || 'Media';
                 document.getElementById('mediaThumb').src = data.thumbnail || '';
 
-                // 1. Âm thanh
                 const audioSection = document.getElementById('audioSection');
                 const btnAudio = document.getElementById('btnAudio');
                 if (data.audio_url) {
@@ -411,7 +419,6 @@ HTML_CONTENT = """<!DOCTYPE html>
                     audioSection.classList.add('hidden');
                 }
 
-                // 2. Video
                 const videoSection = document.getElementById('videoSection');
                 const videoFormatsList = document.getElementById('videoFormatsList');
                 videoFormatsList.innerHTML = '';
@@ -435,7 +442,6 @@ HTML_CONTENT = """<!DOCTYPE html>
                     videoSection.classList.add('hidden');
                 }
 
-                // 3. Ảnh
                 const photoSection = document.getElementById('photoSection');
                 const photoGrid = document.getElementById('photoGrid');
                 photoGrid.innerHTML = '';
