@@ -3,211 +3,236 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MediaFlow - Trình Tải Đa Nền Tảng</title>
+    <title>Universal Media Downloader</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .glassmorphism {
-            background: rgba(30, 41, 59, 0.7);
+        .glass {
+            background: rgba(15, 23, 42, 0.75);
             backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .glow-input:focus-within {
-            box-shadow: 0 0 25px -5px rgba(59, 130, 246, 0.5);
         }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen relative overflow-x-hidden flex flex-col justify-between selection:bg-blue-500 selection:text-white">
-    <div class="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none"></div>
-    <div class="fixed bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] pointer-events-none"></div>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen flex flex-col items-center justify-between p-4 sm:p-6 selection:bg-blue-600">
 
-    <header class="w-full max-w-5xl mx-auto px-6 py-6 flex justify-between items-center z-10">
+    <!-- Header -->
+    <header class="w-full max-w-3xl flex justify-between items-center py-4">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                <i class="fa-solid fa-cloud-arrow-down text-white text-lg"></i>
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <i class="fa-solid fa-bolt text-white text-lg"></i>
             </div>
-            <span class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">MediaFlow</span>
+            <span class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">MediaDownloader</span>
         </div>
-        <div class="flex items-center gap-2 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
+        <div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold px-3 py-1.5 rounded-full">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>API Online</span>
+            Server Sẵn Sàng
         </div>
     </header>
 
-    <main class="w-full max-w-2xl mx-auto px-4 py-8 z-10 flex-1 flex flex-col justify-center">
+    <!-- Main Container -->
+    <main class="w-full max-w-2xl my-auto">
         <div class="text-center mb-8">
-            <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3">
-                Tải Mọi Thứ <span class="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">Chỉ Một Click</span>
+            <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight mb-3">
+                Tải Video, Âm Thanh & Ảnh
             </h1>
-            <p class="text-slate-400 text-sm sm:text-base">Hỗ trợ trích xuất video Full HD, tách nhạc và album ảnh chất lượng gốc</p>
-            
-            <div class="flex justify-center items-center gap-4 mt-6 text-slate-400 text-lg">
-                <span class="hover:text-red-500 transition-colors" title="YouTube"><i class="fa-brands fa-youtube"></i></span>
-                <span class="hover:text-white transition-colors" title="TikTok"><i class="fa-brands fa-tiktok"></i></span>
-                <span class="hover:text-blue-500 transition-colors" title="Facebook"><i class="fa-brands fa-facebook"></i></span>
-                <span class="hover:text-pink-500 transition-colors" title="Instagram"><i class="fa-brands fa-instagram"></i></span>
-            </div>
+            <p class="text-slate-400 text-sm sm:text-base">Tự động nhận diện mạng xã hội & tùy chọn chất lượng video</p>
         </div>
 
-        <div class="glassmorphism p-2 sm:p-3 rounded-2xl shadow-2xl mb-8 glow-input transition-all duration-300 border border-slate-700/50">
-            <div class="flex items-center gap-2">
-                <div class="pl-3 text-slate-400 text-lg">
+        <!-- Input Card -->
+        <div class="glass p-3 sm:p-4 rounded-2xl shadow-2xl border border-slate-800 focus-within:border-blue-500/50 transition-all duration-300 mb-6">
+            <div class="flex items-center gap-3">
+                <!-- Icon nhận diện tự động -->
+                <div id="platformIcon" class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 text-lg transition-all duration-300">
                     <i class="fa-solid fa-link"></i>
                 </div>
-                <input id="urlInput" type="text" placeholder="Dán liên kết video hoặc bài viết tại đây..." 
-                       class="flex-1 bg-transparent border-none text-slate-100 placeholder-slate-500 px-3 py-3 text-sm sm:text-base focus:outline-none">
                 
-                <button onclick="pasteClipboard()" class="hidden sm:flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-xl text-xs font-medium transition border border-slate-700">
-                    <i class="fa-regular fa-clipboard"></i>
-                    <span>Dán</span>
-                </button>
+                <input id="urlInput" type="text" oninput="detectPlatform(this.value)" placeholder="Dán link Facebook, TikTok, Instagram hoặc YouTube..." 
+                       class="flex-1 bg-transparent border-none text-slate-100 placeholder-slate-500 text-sm sm:text-base focus:outline-none">
                 
                 <button onclick="extractLink()" id="btnSubmit" 
-                        class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold px-6 py-3.5 rounded-xl text-sm transition-all shadow-lg shadow-blue-600/30 active:scale-95 flex items-center gap-2 shrink-0">
-                    <span id="btnText">Tải Ngay</span>
+                        class="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-semibold px-5 sm:px-6 py-3 rounded-xl text-sm transition flex items-center gap-2 shrink-0 shadow-lg shadow-blue-600/30">
+                    <span id="btnText">Xử Lý</span>
                     <i id="btnIcon" class="fa-solid fa-arrow-right text-xs"></i>
                 </button>
             </div>
         </div>
 
-        <div id="errorMsg" class="hidden mb-6 p-4 rounded-xl bg-red-950/40 border border-red-800/60 text-red-300 text-sm flex items-center gap-3">
+        <!-- Error Notification -->
+        <div id="errorBox" class="hidden mb-6 p-4 rounded-xl bg-red-950/40 border border-red-800 text-red-300 text-sm flex items-center gap-3">
             <i class="fa-solid fa-circle-exclamation text-red-400 text-lg"></i>
-            <span id="errorText">Có lỗi xảy ra</span>
+            <span id="errorMsg">Đã xảy ra lỗi</span>
         </div>
 
-        <div id="resultCard" class="hidden glassmorphism rounded-3xl p-6 shadow-2xl border border-slate-700/60 transition-all duration-500">
-            <div class="flex flex-col sm:flex-row gap-5 items-start">
-                <div class="w-full sm:w-44 h-44 rounded-2xl overflow-hidden bg-slate-900 shrink-0 relative group">
-                    <img id="thumb" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-                    <div id="badgePlatform" class="absolute top-2 left-2 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg text-[11px] font-bold tracking-wide uppercase">
-                        Media
+        <!-- Results Card -->
+        <div id="resultCard" class="hidden glass rounded-3xl p-6 shadow-2xl border border-slate-800 transition-all">
+            <div class="flex flex-col sm:flex-row gap-5 items-start mb-6">
+                <img id="mediaThumb" class="w-full sm:w-40 h-40 object-cover rounded-2xl bg-slate-900 border border-slate-800">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span id="platformTag" class="text-[11px] font-bold tracking-wider px-2.5 py-1 rounded-md uppercase bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                            Nền tảng
+                        </span>
                     </div>
-                </div>
-                
-                <div class="flex-1 w-full flex flex-col justify-between h-full min-h-[176px]">
-                    <div>
-                        <h3 id="mediaTitle" class="font-bold text-base sm:text-lg text-slate-100 line-clamp-2 mb-2 leading-snug"></h3>
-                        <div class="flex items-center gap-3 text-xs text-slate-400 mb-4">
-                            <span id="authorInfo"><i class="fa-regular fa-circle-check text-blue-400 mr-1"></i>Đã sẵn sàng tải</span>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-wrap gap-2.5" id="actionButtons">
-                        <a id="btnVideo" target="_blank" download class="hidden flex-1 min-w-[130px] bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm text-center transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20">
-                            <i class="fa-solid fa-video"></i>
-                            <span>Tải Video MP4</span>
-                        </a>
-                        <a id="btnAudio" target="_blank" download class="hidden flex-1 min-w-[130px] bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm text-center transition flex items-center justify-center gap-2 shadow-lg shadow-amber-600/20">
-                            <i class="fa-solid fa-music"></i>
-                            <span>Tải Nhạc MP3</span>
-                        </a>
-                    </div>
+                    <h3 id="mediaTitle" class="font-bold text-base sm:text-lg text-slate-100 line-clamp-2 leading-snug mb-3"></h3>
+                    <p class="text-xs text-slate-400"><i class="fa-regular fa-clock mr-1"></i>Đã trích xuất thành công các định dạng sẵn có</p>
                 </div>
             </div>
 
-            <div id="photosSection" class="hidden mt-6 pt-6 border-t border-slate-700/60">
-                <div class="flex justify-between items-center mb-3">
-                    <span class="text-sm font-bold text-slate-200"><i class="fa-regular fa-images mr-1.5 text-blue-400"></i>Album hình ảnh (<span id="photoCount">0</span>)</span>
-                </div>
-                <div id="photosGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+            <!-- Tải Nhạc MP3 -->
+            <div id="audioSection" class="hidden mb-5">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-music text-amber-400"></i> Âm Thanh Gốc
+                </p>
+                <a id="btnAudio" target="_blank" download class="w-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 p-3 rounded-xl flex items-center justify-between text-sm transition font-medium text-amber-400">
+                    <span class="flex items-center gap-2"><i class="fa-solid fa-file-audio"></i> Tải Âm Thanh (MP3 / Audio)</span>
+                    <i class="fa-solid fa-download"></i>
+                </a>
+            </div>
+
+            <!-- Tải Video MP4 (Tùy chọn độ phân giải) -->
+            <div id="videoSection" class="hidden mb-5">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-video text-emerald-400"></i> Video MP4 (Chọn chất lượng)
+                </p>
+                <div id="videoFormatsList" class="flex flex-col gap-2"></div>
+            </div>
+
+            <!-- Tải Album Ảnh -->
+            <div id="photoSection" class="hidden">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-images text-blue-400"></i> Album Hình Ảnh
+                </p>
+                <div id="photoGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
             </div>
         </div>
     </main>
 
-    <footer class="w-full text-center py-6 text-xs text-slate-500 z-10">
-        © 2026 MediaFlow Studio. Tốc độ cao & Miễn phí.
+    <!-- Footer -->
+    <footer class="w-full text-center py-4 text-xs text-slate-600">
+        Universal Downloader • 2026
     </footer>
 
     <script>
-        async function pasteClipboard() {
-            try {
-                const text = await navigator.clipboard.readText();
-                document.getElementById('urlInput').value = text;
-            } catch (err) {
-                alert('Không thể truy cập bộ nhớ tạm. Hãy dán thủ công!');
+        // Nhận diện Icon nền tảng theo thời gian thực khi dán link
+        function detectPlatform(val) {
+            const iconDiv = document.getElementById('platformIcon');
+            const url = val.toLowerCase();
+
+            if (url.includes('tiktok.com')) {
+                iconDiv.innerHTML = '<i class="fa-brands fa-tiktok text-white"></i>';
+            } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                iconDiv.innerHTML = '<i class="fa-brands fa-youtube text-red-500"></i>';
+            } else if (url.includes('facebook.com') || url.includes('fb.watch') || url.includes('fb.com')) {
+                iconDiv.innerHTML = '<i class="fa-brands fa-facebook text-blue-500"></i>';
+            } else if (url.includes('instagram.com')) {
+                iconDiv.innerHTML = '<i class="fa-brands fa-instagram text-pink-500"></i>';
+            } else {
+                iconDiv.innerHTML = '<i class="fa-solid fa-link text-slate-400"></i>';
             }
         }
 
         async function extractLink() {
-            const input = document.getElementById('urlInput');
+            const urlInput = document.getElementById('urlInput');
             const btn = document.getElementById('btnSubmit');
             const btnText = document.getElementById('btnText');
             const btnIcon = document.getElementById('btnIcon');
-            const resCard = document.getElementById('resultCard');
+            const resultCard = document.getElementById('resultCard');
+            const errorBox = document.getElementById('errorBox');
             const errorMsg = document.getElementById('errorMsg');
-            const errorText = document.getElementById('errorText');
-            const photosSection = document.getElementById('photosSection');
-            const photosGrid = document.getElementById('photosGrid');
 
-            const url = input.value.trim();
-            if (!url) return alert('Vui lòng dán liên kết cần tải!');
+            const val = urlInput.value.trim();
+            if (!val) return alert('Vui lòng dán liên kết!');
 
+            // Loading state
             btn.disabled = true;
             btnText.innerText = 'Đang Quét...';
-            btnIcon.className = 'fa-solid fa-circle-notch animate-spin text-xs';
-            resCard.classList.add('hidden');
-            errorMsg.classList.add('hidden');
-            photosSection.classList.add('hidden');
-            photosGrid.innerHTML = '';
+            btnIcon.className = 'fa-solid fa-spinner animate-spin text-xs';
+            resultCard.classList.add('hidden');
+            errorBox.classList.add('hidden');
 
             try {
                 const res = await fetch('/api/extract', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url })
+                    body: JSON.stringify({ url: val })
                 });
-                const json = await res.json();
-                if (!res.ok) throw new Error(json.detail || 'Không thể bóc tách nội dung từ link này!');
 
-                document.getElementById('mediaTitle').innerText = json.title || 'Nội dung tải về';
-                document.getElementById('badgePlatform').innerText = json.platform || 'Media';
-                
-                const thumb = document.getElementById('thumb');
-                if (json.thumbnail) {
-                    thumb.src = json.thumbnail;
-                    thumb.classList.remove('hidden');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Không thể bóc tách liên kết!');
+
+                // Hiển thị thông tin cơ bản
+                document.getElementById('mediaTitle').innerText = data.title || 'Nội dung tải về';
+                document.getElementById('platformTag').innerText = data.platform || 'Media';
+                document.getElementById('mediaThumb').src = data.thumbnail || '';
+
+                // 1. Luồng Âm Thanh (MP3)
+                const audioSection = document.getElementById('audioSection');
+                const btnAudio = document.getElementById('btnAudio');
+                if (data.audio_url) {
+                    audioSection.classList.remove('hidden');
+                    btnAudio.href = data.audio_url;
                 } else {
-                    thumb.classList.add('hidden');
+                    audioSection.classList.add('hidden');
                 }
 
-                const btnVideo = document.getElementById('btnVideo');
-                const btnAudio = document.getElementById('btnAudio');
+                // 2. Luồng Video (Phân loại độ phân giải)
+                const videoSection = document.getElementById('videoSection');
+                const videoFormatsList = document.getElementById('videoFormatsList');
+                videoFormatsList.innerHTML = '';
 
-                btnVideo.classList.toggle('hidden', !json.video_url);
-                if (json.video_url) btnVideo.href = json.video_url;
+                if (data.video_formats && data.video_formats.length > 0) {
+                    videoSection.classList.remove('hidden');
+                    data.video_formats.forEach(f => {
+                        const a = document.createElement('a');
+                        a.href = f.url;
+                        a.target = '_blank';
+                        a.download = '';
+                        a.className = 'w-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 p-3 rounded-xl flex items-center justify-between text-sm transition font-medium text-slate-200';
+                        a.innerHTML = `
+                            <span class="flex items-center gap-2">
+                                <i class="fa-solid fa-circle-play text-emerald-400"></i>
+                                <span>MP4 - Độ phân giải: <strong class="text-white">${f.quality}</strong></span>
+                            </span>
+                            <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded">Tải về</span>
+                        `;
+                        videoFormatsList.appendChild(a);
+                    });
+                } else {
+                    videoSection.classList.add('hidden');
+                }
 
-                btnAudio.classList.toggle('hidden', !json.audio_url);
-                if (json.audio_url) btnAudio.href = json.audio_url;
+                // 3. Luồng Album Ảnh
+                const photoSection = document.getElementById('photoSection');
+                const photoGrid = document.getElementById('photoGrid');
+                photoGrid.innerHTML = '';
 
-                if (json.photos && json.photos.length > 0) {
-                    photosSection.classList.remove('hidden');
-                    document.getElementById('photoCount').innerText = json.photos.length;
-
-                    json.photos.forEach((imgUrl, idx) => {
-                        const item = document.createElement('div');
-                        item.className = 'relative group rounded-xl overflow-hidden bg-slate-900 border border-slate-700/80 aspect-square';
-                        item.innerHTML = `
-                            <img src="${imgUrl}" class="w-full h-full object-cover">
-                            <a href="${imgUrl}" target="_blank" download class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1.5 text-xs font-semibold text-white transition-all backdrop-blur-xs">
-                                <i class="fa-solid fa-arrow-down"></i> Tải ảnh #${idx+1}
+                if (data.photos && data.photos.length > 0) {
+                    photoSection.classList.remove('hidden');
+                    data.photos.forEach((photoUrl, idx) => {
+                        const div = document.createElement('div');
+                        div.className = 'relative group rounded-xl overflow-hidden aspect-square bg-slate-900 border border-slate-800';
+                        div.innerHTML = `
+                            <img src="${photoUrl}" class="w-full h-full object-cover">
+                            <a href="${photoUrl}" target="_blank" download class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-semibold text-white transition-all">
+                                <i class="fa-solid fa-download mr-1"></i> Tải ảnh ${idx + 1}
                             </a>
                         `;
-                        photosGrid.appendChild(item);
+                        photoGrid.appendChild(div);
                     });
+                } else {
+                    photoSection.classList.add('hidden');
                 }
 
-                resCard.classList.remove('hidden');
+                resultCard.classList.remove('hidden');
             } catch (err) {
-                errorText.innerText = err.message;
-                errorMsg.classList.remove('hidden');
+                errorMsg.innerText = err.message;
+                errorBox.classList.remove('hidden');
             } finally {
                 btn.disabled = false;
-                btnText.innerText = 'Tải Ngay';
+                btnText.innerText = 'Xử Lý';
                 btnIcon.className = 'fa-solid fa-arrow-right text-xs';
             }
         }
