@@ -10,7 +10,8 @@ app = FastAPI(title="Universal Downloader")
 
 def clean_url(url: str) -> str:
     url = url.strip()
-    if "youtube.com/watch" in url:
+    if "youtube.com" in url or "youtu.be" in url:
+        url = url.split("&list=")[0].split("?list=")[0]
         m = re.search(r"v=([a-zA-Z0-9_-]+)", url)
         if m:
             return f"https://www.youtube.com/watch?v={m.group(1)}"
@@ -88,7 +89,6 @@ def extract_instagram_media(url: str):
 
 # --- 3. FACEBOOK ENGINE ---
 def extract_facebook_media(url: str):
-    # Giải mã link redirect /share/r/ nếu có
     session = requests.Session()
     session.headers.update({
         "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
@@ -113,11 +113,9 @@ def extract_facebook_media(url: str):
             if og_title and og_title.get("content"):
                 title = og_title["content"]
 
-            # 1. Thử lấy link video trực tiếp từ thẻ meta
             og_video = soup.find("meta", property="og:video") or soup.find("meta", property="og:video:secure_url")
-            
-            # 2. Nếu thẻ meta chưa có, regex tìm link video trong nội dung script
             video_url = og_video["content"] if (og_video and og_video.get("content")) else None
+            
             if not video_url:
                 v_match = re.search(r'"playable_url":"([^"]+)"', resp.text) or re.search(r'"playable_url_quality_hd":"([^"]+)"', resp.text)
                 if v_match:
@@ -137,7 +135,6 @@ def extract_facebook_media(url: str):
                     "photos": []
                 }
 
-            # Nếu không có video, coi như bài đăng ảnh
             if thumb_url and "static.xx.fbcdn.net" not in thumb_url:
                 return {
                     "status": "success",
@@ -154,12 +151,23 @@ def extract_facebook_media(url: str):
 
 # --- 4. YOUTUBE & ENGINE KHÁC ---
 def extract_ytdlp_engine(url: str):
+    if "youtube.com" in url or "youtu.be" in url:
+        url = url.split("&list=")[0].split("?list=")[0]
+
     ydl_opts = {
         'quiet': True,
         'no_warnings': True,
         'skip_download': True,
-        'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
-        'http_headers': {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        'noplaylist': True,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['ios', 'mweb']
+            }
+        },
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+            'Accept-Language': 'en-US,en;q=0.9',
+        }
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -189,7 +197,7 @@ def extract_ytdlp_engine(url: str):
             "title": info.get('title', 'Unknown Media'),
             "thumbnail": info.get('thumbnail'),
             "duration": info.get('duration'),
-            "platform": info.get('extractor_key', 'Unknown'),
+            "platform": info.get('extractor_key', 'YouTube'),
             "video_formats": video_list[:5],
             "audio_url": audio_url,
             "photos": []
@@ -386,7 +394,7 @@ HTML_CONTENT = """<!DOCTYPE html>
                     videoSection.classList.add('hidden');
                 }
 
-                // Ảnh (Hiện sẵn nút tải rõ ràng bên dưới ảnh)
+                // Ảnh
                 const photoSection = document.getElementById('photoSection');
                 const photoGrid = document.getElementById('photoGrid');
                 photoGrid.innerHTML = '';
