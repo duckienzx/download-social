@@ -88,13 +88,24 @@ def extract_instagram_media(url: str):
 
 # --- 3. FACEBOOK ENGINE ---
 def extract_facebook_media(url: str):
-    clean_fb = url.replace("www.facebook.com", "mbasic.facebook.com").replace("web.facebook.com", "mbasic.facebook.com")
-    headers = {
+    # Giải mã link redirect /share/r/ nếu có
+    session = requests.Session()
+    session.headers.update({
         "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    }
+        "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+    })
+    
     try:
-        resp = requests.get(clean_fb, headers=headers, timeout=12, allow_redirects=True)
+        init_res = session.get(url, timeout=10, allow_redirects=True)
+        final_url = init_res.url
+    except Exception:
+        final_url = url
+
+    clean_fb = final_url.replace("www.facebook.com", "mbasic.facebook.com").replace("web.facebook.com", "mbasic.facebook.com")
+    
+    try:
+        resp = session.get(clean_fb, timeout=12, allow_redirects=True)
         if resp.status_code == 200:
             soup = BeautifulSoup(resp.text, 'html.parser')
             title = "Facebook Media"
@@ -102,29 +113,40 @@ def extract_facebook_media(url: str):
             if og_title and og_title.get("content"):
                 title = og_title["content"]
 
+            # 1. Thử lấy link video trực tiếp từ thẻ meta
             og_video = soup.find("meta", property="og:video") or soup.find("meta", property="og:video:secure_url")
-            if og_video and og_video.get("content"):
-                thumb = soup.find("meta", property="og:image")
+            
+            # 2. Nếu thẻ meta chưa có, regex tìm link video trong nội dung script
+            video_url = og_video["content"] if (og_video and og_video.get("content")) else None
+            if not video_url:
+                v_match = re.search(r'"playable_url":"([^"]+)"', resp.text) or re.search(r'"playable_url_quality_hd":"([^"]+)"', resp.text)
+                if v_match:
+                    video_url = v_match.group(1).replace("\\/", "/")
+
+            thumb = soup.find("meta", property="og:image")
+            thumb_url = thumb["content"] if (thumb and thumb.get("content")) else None
+
+            if video_url:
                 return {
                     "status": "success",
                     "title": title,
-                    "thumbnail": thumb["content"] if thumb else None,
-                    "platform": "Facebook",
-                    "video_formats": [{"quality": "Chất lượng cao (MP4)", "url": og_video["content"], "ext": "mp4"}],
+                    "thumbnail": thumb_url,
+                    "platform": "Facebook (Video)",
+                    "video_formats": [{"quality": "Chất lượng cao (MP4)", "url": video_url, "ext": "mp4"}],
                     "audio_url": None,
                     "photos": []
                 }
 
-            og_image = soup.find("meta", property="og:image")
-            if og_image and og_image.get("content") and "static.xx.fbcdn.net" not in og_image["content"]:
+            # Nếu không có video, coi như bài đăng ảnh
+            if thumb_url and "static.xx.fbcdn.net" not in thumb_url:
                 return {
                     "status": "success",
                     "title": title,
-                    "thumbnail": og_image["content"],
-                    "platform": "Facebook",
+                    "thumbnail": thumb_url,
+                    "platform": "Facebook (Photo)",
                     "video_formats": [],
                     "audio_url": None,
-                    "photos": [og_image["content"]]
+                    "photos": [thumb_url]
                 }
     except Exception:
         pass
@@ -268,9 +290,9 @@ HTML_CONTENT = """<!DOCTYPE html>
 
             <div id="photoSection" class="hidden">
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                    <i class="fa-solid fa-images text-blue-400"></i> Album Hình Ảnh
+                    <i class="fa-solid fa-images text-blue-400"></i> Danh Sách Ảnh
                 </p>
-                <div id="photoGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+                <div id="photoGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
             </div>
         </div>
     </main>
@@ -328,6 +350,7 @@ HTML_CONTENT = """<!DOCTYPE html>
                 document.getElementById('platformTag').innerText = data.platform || 'Media';
                 document.getElementById('mediaThumb').src = data.thumbnail || '';
 
+                // Âm thanh
                 const audioSection = document.getElementById('audioSection');
                 const btnAudio = document.getElementById('btnAudio');
                 if (data.audio_url) {
@@ -337,6 +360,7 @@ HTML_CONTENT = """<!DOCTYPE html>
                     audioSection.classList.add('hidden');
                 }
 
+                // Video
                 const videoSection = document.getElementById('videoSection');
                 const videoFormatsList = document.getElementById('videoFormatsList');
                 videoFormatsList.innerHTML = '';
@@ -352,9 +376,9 @@ HTML_CONTENT = """<!DOCTYPE html>
                         a.innerHTML = `
                             <span class="flex items-center gap-2">
                                 <i class="fa-solid fa-circle-play text-emerald-400"></i>
-                                <span>MP4 - Độ phân giải: <strong class="text-white">${f.quality}</strong></span>
+                                <span>MP4 - Chất lượng: <strong class="text-white">${f.quality}</strong></span>
                             </span>
-                            <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded">Tải về</span>
+                            <span class="text-xs bg-emerald-500/20 text-emerald-400 font-bold px-3 py-1.5 rounded-lg border border-emerald-500/30">Tải Video</span>
                         `;
                         videoFormatsList.appendChild(a);
                     });
@@ -362,6 +386,7 @@ HTML_CONTENT = """<!DOCTYPE html>
                     videoSection.classList.add('hidden');
                 }
 
+                // Ảnh (Hiện sẵn nút tải rõ ràng bên dưới ảnh)
                 const photoSection = document.getElementById('photoSection');
                 const photoGrid = document.getElementById('photoGrid');
                 photoGrid.innerHTML = '';
@@ -370,11 +395,11 @@ HTML_CONTENT = """<!DOCTYPE html>
                     photoSection.classList.remove('hidden');
                     data.photos.forEach((photoUrl, idx) => {
                         const div = document.createElement('div');
-                        div.className = 'relative group rounded-xl overflow-hidden aspect-square bg-slate-900 border border-slate-800';
+                        div.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col gap-3';
                         div.innerHTML = `
-                            <img src="${photoUrl}" class="w-full h-full object-cover">
-                            <a href="${photoUrl}" target="_blank" download class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-semibold text-white transition-all">
-                                <i class="fa-solid fa-download mr-1"></i> Tải ảnh ${idx + 1}
+                            <img src="${photoUrl}" class="w-full h-48 object-cover rounded-xl bg-black">
+                            <a href="${photoUrl}" target="_blank" download class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-xl text-xs text-center flex items-center justify-center gap-1.5 transition">
+                                <i class="fa-solid fa-download"></i> Tải Ảnh Chất Lượng Cao #${idx + 1}
                             </a>
                         `;
                         photoGrid.appendChild(div);
