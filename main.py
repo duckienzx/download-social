@@ -89,51 +89,70 @@ def extract_instagram_media(url: str):
 
 # --- 3. FACEBOOK ENGINE ---
 def extract_facebook_media(url: str):
+    # Nếu là Facebook Reels/Video, dùng thẳng yt-dlp để bóc tách luồng stream video chuẩn xác
+    if any(reels_tag in url for reels_tag in ["/reel", "/share/r/", "watch", "videos"]):
+        try:
+            ydl_opts = {
+                'quiet': True,
+                'no_warnings': True,
+                'skip_download': True,
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+                    'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+                }
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                formats = info.get('formats', [])
+                video_formats = []
+                seen_res = set()
+
+                for f in reversed(formats):
+                    v_url = f.get('url')
+                    height = f.get('height') or 'HD'
+                    format_note = f.get('format_note') or f"{height}p"
+                    if v_url and format_note not in seen_res and f.get('vcodec') != 'none':
+                        seen_res.add(format_note)
+                        video_formats.append({
+                            "quality": f"{format_note}",
+                            "url": v_url,
+                            "ext": "mp4"
+                        })
+
+                if not video_formats and info.get('url'):
+                    video_formats.append({"quality": "Gốc (MP4)", "url": info.get('url'), "ext": "mp4"})
+
+                if video_formats:
+                    return {
+                        "status": "success",
+                        "title": info.get('title', 'Facebook Reel / Video'),
+                        "thumbnail": info.get('thumbnail'),
+                        "duration": info.get('duration'),
+                        "platform": "Facebook (Video)",
+                        "video_formats": video_formats[:3],
+                        "audio_url": None,
+                        "photos": []
+                    }
+        except Exception:
+            pass
+
+    # Bóc tách trang ảnh thông thường
     session = requests.Session()
     session.headers.update({
         "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
     })
-    
     try:
-        init_res = session.get(url, timeout=10, allow_redirects=True)
-        final_url = init_res.url
-    except Exception:
-        final_url = url
-
-    clean_fb = final_url.replace("www.facebook.com", "mbasic.facebook.com").replace("web.facebook.com", "mbasic.facebook.com")
-    
-    try:
-        resp = session.get(clean_fb, timeout=12, allow_redirects=True)
+        resp = session.get(url, timeout=10, allow_redirects=True)
         if resp.status_code == 200:
             soup = BeautifulSoup(resp.text, 'html.parser')
-            title = "Facebook Media"
+            title = "Facebook Post"
             og_title = soup.find("meta", property="og:title")
             if og_title and og_title.get("content"):
                 title = og_title["content"]
 
-            og_video = soup.find("meta", property="og:video") or soup.find("meta", property="og:video:secure_url")
-            video_url = og_video["content"] if (og_video and og_video.get("content")) else None
-            
-            if not video_url:
-                v_match = re.search(r'"playable_url":"([^"]+)"', resp.text) or re.search(r'"playable_url_quality_hd":"([^"]+)"', resp.text)
-                if v_match:
-                    video_url = v_match.group(1).replace("\\/", "/")
-
             thumb = soup.find("meta", property="og:image")
             thumb_url = thumb["content"] if (thumb and thumb.get("content")) else None
-
-            if video_url:
-                return {
-                    "status": "success",
-                    "title": title,
-                    "thumbnail": thumb_url,
-                    "platform": "Facebook (Video)",
-                    "video_formats": [{"quality": "Chất lượng cao (MP4)", "url": video_url, "ext": "mp4"}],
-                    "audio_url": None,
-                    "photos": []
-                }
 
             if thumb_url and "static.xx.fbcdn.net" not in thumb_url:
                 return {
@@ -159,11 +178,7 @@ def extract_ytdlp_engine(url: str):
         'no_warnings': True,
         'skip_download': True,
         'noplaylist': True,
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['ios', 'mweb']
-            }
-        },
+        'extractor_args': {'youtube': {'player_client': ['ios', 'mweb']}},
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
             'Accept-Language': 'en-US,en;q=0.9',
@@ -197,7 +212,7 @@ def extract_ytdlp_engine(url: str):
             "title": info.get('title', 'Unknown Media'),
             "thumbnail": info.get('thumbnail'),
             "duration": info.get('duration'),
-            "platform": info.get('extractor_key', 'YouTube'),
+            "platform": info.get('extractor_key', 'Media'),
             "video_formats": video_list[:5],
             "audio_url": audio_url,
             "photos": []
@@ -283,10 +298,10 @@ HTML_CONTENT = """<!DOCTYPE html>
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
                     <i class="fa-solid fa-music text-amber-400"></i> Âm Thanh Gốc
                 </p>
-                <a id="btnAudio" target="_blank" download class="w-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 p-3 rounded-xl flex items-center justify-between text-sm transition font-medium text-amber-400">
+                <button id="btnAudio" class="w-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 p-3 rounded-xl flex items-center justify-between text-sm transition font-medium text-amber-400">
                     <span class="flex items-center gap-2"><i class="fa-solid fa-file-audio"></i> Tải Âm Thanh (MP3 / Audio)</span>
                     <i class="fa-solid fa-download"></i>
-                </a>
+                </button>
             </div>
 
             <div id="videoSection" class="hidden mb-5">
@@ -310,6 +325,34 @@ HTML_CONTENT = """<!DOCTYPE html>
     </footer>
 
     <script>
+        // Tải trực tiếp file về máy thông qua Blob để vượt qua giới hạn Cross-Origin (CORS)
+        async function forceDownload(url, filename, btnElement) {
+            const originalHTML = btnElement.innerHTML;
+            btnElement.disabled = true;
+            btnElement.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> Đang tải file về máy...';
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Không thể tải file trực tiếp');
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(blobUrl);
+            } catch (err) {
+                // Nếu bị chặn tải qua blob, mở tab mới như phương án dự phòng
+                window.open(url, '_blank');
+            } finally {
+                btnElement.disabled = false;
+                btnElement.innerHTML = originalHTML;
+            }
+        }
+
         function detectPlatform(val) {
             const iconDiv = document.getElementById('platformIcon');
             const url = val.toLowerCase();
@@ -358,17 +401,17 @@ HTML_CONTENT = """<!DOCTYPE html>
                 document.getElementById('platformTag').innerText = data.platform || 'Media';
                 document.getElementById('mediaThumb').src = data.thumbnail || '';
 
-                // Âm thanh
+                // 1. Âm thanh
                 const audioSection = document.getElementById('audioSection');
                 const btnAudio = document.getElementById('btnAudio');
                 if (data.audio_url) {
                     audioSection.classList.remove('hidden');
-                    btnAudio.href = data.audio_url;
+                    btnAudio.onclick = () => forceDownload(data.audio_url, 'audio.mp3', btnAudio);
                 } else {
                     audioSection.classList.add('hidden');
                 }
 
-                // Video
+                // 2. Video
                 const videoSection = document.getElementById('videoSection');
                 const videoFormatsList = document.getElementById('videoFormatsList');
                 videoFormatsList.innerHTML = '';
@@ -376,25 +419,23 @@ HTML_CONTENT = """<!DOCTYPE html>
                 if (data.video_formats && data.video_formats.length > 0) {
                     videoSection.classList.remove('hidden');
                     data.video_formats.forEach(f => {
-                        const a = document.createElement('a');
-                        a.href = f.url;
-                        a.target = '_blank';
-                        a.download = '';
-                        a.className = 'w-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 p-3 rounded-xl flex items-center justify-between text-sm transition font-medium text-slate-200';
-                        a.innerHTML = `
+                        const btnVid = document.createElement('button');
+                        btnVid.className = 'w-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 p-3 rounded-xl flex items-center justify-between text-sm transition font-medium text-slate-200';
+                        btnVid.innerHTML = `
                             <span class="flex items-center gap-2">
                                 <i class="fa-solid fa-circle-play text-emerald-400"></i>
                                 <span>MP4 - Chất lượng: <strong class="text-white">${f.quality}</strong></span>
                             </span>
                             <span class="text-xs bg-emerald-500/20 text-emerald-400 font-bold px-3 py-1.5 rounded-lg border border-emerald-500/30">Tải Video</span>
                         `;
-                        videoFormatsList.appendChild(a);
+                        btnVid.onclick = () => forceDownload(f.url, `video_${f.quality}.mp4`, btnVid);
+                        videoFormatsList.appendChild(btnVid);
                     });
                 } else {
                     videoSection.classList.add('hidden');
                 }
 
-                // Ảnh
+                // 3. Ảnh
                 const photoSection = document.getElementById('photoSection');
                 const photoGrid = document.getElementById('photoGrid');
                 photoGrid.innerHTML = '';
@@ -406,10 +447,12 @@ HTML_CONTENT = """<!DOCTYPE html>
                         div.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col gap-3';
                         div.innerHTML = `
                             <img src="${photoUrl}" class="w-full h-48 object-cover rounded-xl bg-black">
-                            <a href="${photoUrl}" target="_blank" download class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-xl text-xs text-center flex items-center justify-center gap-1.5 transition">
-                                <i class="fa-solid fa-download"></i> Tải Ảnh Chất Lượng Cao #${idx + 1}
-                            </a>
+                            <button class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition">
+                                <i class="fa-solid fa-download"></i> Tải Ảnh #${idx + 1}
+                            </button>
                         `;
+                        const dlBtn = div.querySelector('button');
+                        dlBtn.onclick = () => forceDownload(photoUrl, `photo_${idx + 1}.jpg`, dlBtn);
                         photoGrid.appendChild(div);
                     });
                 } else {
