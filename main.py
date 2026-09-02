@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+from pathlib import Path
 import yt_dlp
 import requests
 from bs4 import BeautifulSoup
@@ -8,7 +9,10 @@ import json
 import re
 
 app = FastAPI(title="Universal Downloader")
-templates = Jinja2Templates(directory="templates")
+
+# Cấu hình đọc index.html ngay tại thư mục gốc cùng cấp với main.py
+BASE_DIR = Path(__file__).resolve().parent
+templates = Jinja2Templates(directory=str(BASE_DIR))
 
 def clean_url(url: str) -> str:
     url = url.strip()
@@ -132,7 +136,7 @@ def extract_facebook_media(url: str):
         pass
     return None
 
-# --- 4. YOUTUBE & ENGINE KHÁC (Bóc tách độ phân giải) ---
+# --- 4. YOUTUBE & ENGINE KHÁC ---
 def extract_ytdlp_engine(url: str):
     ydl_opts = {
         'quiet': True,
@@ -146,11 +150,11 @@ def extract_ytdlp_engine(url: str):
         info = ydl.extract_info(url, download=False)
         formats = info.get('formats', [])
         
-        # Lọc Audio
+        # Audio
         audio_formats = [f for f in formats if f.get('acodec') != 'none' and (f.get('vcodec') == 'none' or 'audio' in f.get('format', '').lower())]
         audio_url = audio_formats[-1].get('url') if audio_formats else None
 
-        # Lọc Video theo độ phân giải (1080p, 720p, 480p, 360p...)
+        # Video theo độ phân giải
         seen_res = set()
         video_list = []
         for f in reversed(formats):
@@ -164,7 +168,6 @@ def extract_ytdlp_engine(url: str):
                     "ext": f.get('ext', 'mp4')
                 })
 
-        # Sắp xếp độ phân giải từ cao xuống thấp
         video_list.sort(key=lambda x: int(re.sub(r'\D', '', x['quality']) or 0), reverse=True)
 
         return {
@@ -173,7 +176,7 @@ def extract_ytdlp_engine(url: str):
             "thumbnail": info.get('thumbnail'),
             "duration": info.get('duration'),
             "platform": info.get('extractor_key', 'Unknown'),
-            "video_formats": video_list[:5], # Giữ lại tối đa 5 mức chất lượng tốt nhất
+            "video_formats": video_list[:5],
             "audio_url": audio_url,
             "photos": []
         }
